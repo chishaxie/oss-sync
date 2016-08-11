@@ -1,0 +1,8 @@
+{
+    "access_key_id": "",
+    "access_key_secret": "",
+    "bucket": "chishaxie-sync",
+    "endpoint": "oss-cn-beijing.aliyuncs.com",
+    "local": "G:\\sync",
+    "remote": "sync"
+}

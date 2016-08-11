@@ -5,11 +5,13 @@ import os
 import sys
 import json
 import hashlib
-import subprocess
+import platform
 
 import oss2
 
 debug = False
+
+sep = os.path.sep
 
 def oss_sync(config):
     assert config.get("access_key_id")
@@ -18,26 +20,26 @@ def oss_sync(config):
     assert config.get("endpoint")
     assert config.get("local")
     assert config.get("remote")
-    assert not config.get("local").endswith('/')
-    assert not config.get("local").endswith('\\')
+    assert not config.get("local").endswith(sep)
     assert not config.get("remote").endswith('/')
 
     auth = oss2.Auth(config["access_key_id"], config["access_key_secret"])
     bucket = oss2.Bucket(auth, config["endpoint"], config["bucket"])
 
     def rfn_to_local_afn(rfn):
-        return '%s/%s' % (config["local"], rfn)
+        return ('%s/%s' % (config["local"], rfn)).replace('/', sep)
     def rfn_to_remote_afn(rfn):
         return '%s/%s' % (config["remote"], rfn)
 
     # scan local
     local = {}
+    local_filesmap_prefix = '~%s.oss_sync' % sep
     for path, dirs, files in os.walk(config["local"]):
-        if path.replace(config["local"], '~').startswith('~/.oss_sync'):
+        if path.replace(config["local"], '~').startswith(local_filesmap_prefix):
             continue
         for fn in files:
-            afn = '%s/%s' % (path, fn)
-            rfn = afn.replace(config["local"]+'/', '')
+            afn = '%s%s%s' % (path, sep, fn)
+            rfn = afn.replace(config["local"]+sep, '').replace('\\', '/')
             mod = os.stat(afn).st_mtime
             local[rfn] = (mod, )
     if debug:
@@ -45,8 +47,8 @@ def oss_sync(config):
         print local
 
     # get local map
-    local_filesmap_dir = '%s/.oss_sync' % config["local"]
-    local_filesmap = '%s/lfs.json' % local_filesmap_dir
+    local_filesmap_dir = '%s%s.oss_sync' % (config["local"], sep)
+    local_filesmap = '%s%slfs.json' % (local_filesmap_dir, sep)
     local2 = json.load(open(local_filesmap)) \
         if os.path.exists(local_filesmap) else {}
     if debug:
@@ -142,6 +144,8 @@ def oss_sync(config):
         if local_dict != None:
             if not os.path.exists(local_filesmap_dir):
                 os.mkdir(local_filesmap_dir)
+                if 'Windows' in platform.system():
+                    os.system("attrib +h %s" % local_filesmap_dir)
             json.dump(local_dict, open(local_filesmap, 'w'), indent=2)
 
     #sync_filesmap(local2, remote2)
