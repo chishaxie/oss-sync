@@ -5,10 +5,18 @@
 import os
 import sys
 import json
+import struct
 import hashlib
 import platform
 
 import oss2
+
+if 'Windows' in platform.system():
+    # pip install pycryptodomex (Win)
+    from Cryptodome.Cipher import AES
+else:
+    # pip install pycryptodome (Mac OSX)
+    from Crypto.Cipher import AES
 
 debug = False
 
@@ -23,6 +31,11 @@ def oss_sync(config):
     assert config.get("remote")
     assert not config.get("local").endswith(sep)
     assert not config.get("remote").endswith('/')
+
+    key = config.get("key")
+    iv = config.get("iv")
+
+    need_crypto = True if key and iv else False
 
     auth = oss2.Auth(config["access_key_id"], config["access_key_secret"])
     bucket = oss2.Bucket(auth, config["endpoint"], config["bucket"])
@@ -158,12 +171,32 @@ def oss_sync(config):
         l_dir = os.path.dirname(l_afn)
         if not os.path.exists(l_dir):
             os.makedirs(l_dir)
-        bucket.get_object_to_file(r_afn, l_afn)
+        if not need_crypto:
+            bucket.get_object_to_file(r_afn, l_afn)
+        else:
+            cryptor = AES.new(bytes(key, 'utf8'), AES.MODE_CBC, bytes(iv, 'utf8'))
+            d = bucket.get_object(r_afn).read()
+            add = struct.unpack('B', d[-1:])[0]
+            d = cryptor.decrypt(d[:-1])
+            d = d[:len(d) - add]
+            f = open(l_afn, 'wb')
+            f.write(d)
+            f.close()
 
     def local_to_remote(rfn):
         r_afn = rfn_to_remote_afn(rfn)
         l_afn = rfn_to_local_afn(rfn)
-        bucket.put_object_from_file(r_afn, l_afn)
+        if not need_crypto:
+            bucket.put_object_from_file(r_afn, l_afn)
+        else:
+            cryptor = AES.new(bytes(key, 'utf8'), AES.MODE_CBC, bytes(iv, 'utf8'))
+            f = open(l_afn, 'rb')
+            d = f.read()
+            f.close()
+            add = 16 - len(d) % 16
+            d += (b'\0' * add)
+            d = cryptor.encrypt(d)
+            bucket.put_object(r_afn, d + struct.pack('B', add))
 
     for k, v in remote_add.items():
         print ('[R-Add] Downloading %s ...' % k)

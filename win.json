@@ -4,5 +4,7 @@
     "bucket": "chishaxie-sync-test",
     "endpoint": "oss-cn-hangzhou.aliyuncs.com",
     "local": "C:\\test\\sync-test",
-    "remote": "chishaxie"
+    "remote": "chishaxie",
+    "key": "length=16 aeskey",
+    "iv": "length=16 aes iv"
 }
