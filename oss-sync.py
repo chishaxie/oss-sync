@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 
+
 import os
 import sys
 import json
@@ -43,8 +44,8 @@ def oss_sync(config):
             mod = os.stat(afn).st_mtime
             local[rfn] = (mod, )
     if debug:
-        print '[local]'
-        print local
+        print ('[local]')
+        print (local)
 
     # get local map
     local_filesmap_dir = '%s%s.oss_sync' % (config["local"], sep)
@@ -52,8 +53,8 @@ def oss_sync(config):
     local2 = json.load(open(local_filesmap)) \
         if os.path.exists(local_filesmap) else {}
     if debug:
-        print '[local2]'
-        print local2
+        print ('[local2]')
+        print (local2)
 
     # # scan remote
     # remote = {}
@@ -82,8 +83,8 @@ def oss_sync(config):
     except oss2.exceptions.NoSuchKey:
         remote2 = {}
     if debug:
-        print '[remote2]'
-        print remote2
+        print ('[remote2]')
+        print (remote2)
 
     def get_file_hash(rfn):
         f = open(rfn_to_local_afn(rfn), 'rb')
@@ -109,12 +110,12 @@ def oss_sync(config):
         if k not in local:
             local_del[k] = v
     if debug:
-        print '[local_add]'
-        print local_add
-        print '[local_mod]'
-        print local_mod
-        print '[local_del]'
-        print local_del
+        print ('[local_add]')
+        print (local_add)
+        print ('[local_mod]')
+        print (local_mod)
+        print ('[local_del]')
+        print (local_del)
 
     # compute remote changes
     remote_add = {}
@@ -130,12 +131,12 @@ def oss_sync(config):
         if k not in remote2:
             remote_del[k] = v
     if debug:
-        print '[remote_add]'
-        print remote_add
-        print '[remote_mod]'
-        print remote_mod
-        print '[remote_del]'
-        print remote_del
+        print ('[remote_add]')
+        print (remote_add)
+        print ('[remote_mod]')
+        print (remote_mod)
+        print ('[remote_del]')
+        print (remote_del)
 
     def sync_filesmap(local_dict=None, remote_dict=None):
         if remote_dict != None:
@@ -165,49 +166,49 @@ def oss_sync(config):
         bucket.put_object_from_file(r_afn, l_afn)
 
     for k, v in remote_add.items():
-        print '[R-Add] Downloading %s ...' % k
+        print ('[R-Add] Downloading %s ...' % k)
         assert k not in local_add
         remote_to_local(k)
         local2[k] = v
         sync_filesmap(local2, None)
 
     for k, v in remote_mod.items():
-        print '[R-Mod] Downloading %s ...' % k
+        print ('[R-Mod] Downloading %s ...' % k)
         assert k not in local_mod
         remote_to_local(k)
         local2[k] = v
         sync_filesmap(local2, None)
 
     for k, v in remote_del.items():
-        print '[R-Del] Deleting %s ...' % k
+        print ('[R-Del] Deleting %s ...' % k)
         assert k not in local_del
         os.remove(rfn_to_local_afn(k))
         del local2[k]
     sync_filesmap(local2, None)
 
     for k, v in local_add.items():
-        print '[L-Add] Uploading %s ...' % k
+        print ('[L-Add] Uploading %s ...' % k)
         local_to_remote(k)
         local2[k] = v
         remote2[k] = v
         sync_filesmap(local2, remote2)
 
     for k, v in local_mod.items():
-        print '[L-Mod] Uploading %s ...' % k
+        print ('[L-Mod] Uploading %s ...' % k)
         local_to_remote(k)
         local2[k] = v
         remote2[k] = v
         sync_filesmap(local2, remote2)
 
     for k, v in local_del.items():
-        print '[L-Del] Deleting %s ...' % k
+        print ('[L-Del] Deleting %s ...' % k)
         del local2[k]
         del remote2[k]
     sync_filesmap(local2, remote2)
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print 'Usage: python oss-sync.py <config>'
+        print ('Usage: python oss-sync.py <config>')
         sys.exit()
 
     config = json.load(open(sys.argv[1]))
